@@ -1,39 +1,94 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+const validIpcChannels = new Set([
+  'process:list',
+  'process:start',
+  'process:stop',
+  'process:restart',
+  'process:add',
+  'process:remove',
+  'process:update',
+  'process:logs',
+  'portpool:status',
+  'portpool:allocate',
+  'portpool:release',
+  'conflict:check',
+  'conflict:resolve',
+  'conflict:list',
+  'system:scanProcesses',
+  'system:killProcess',
+  'app:openPath',
+  'app:openExternal',
+  'app:minimize',
+  'app:maximize',
+  'app:close',
+  'app:getLogDir',
+  'app:getUserDataDir',
+  'app:importSystemProcess'
+])
+
+function createSafeIpcInvoke(channel) {
+  return (...args) => {
+    if (!validIpcChannels.has(channel)) {
+      return Promise.reject(new Error(`非法的IPC通道: ${channel}`))
+    }
+    return ipcRenderer.invoke(channel, ...args)
+  }
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   process: {
-    list: () => ipcRenderer.invoke('process:list'),
-    start: (id) => ipcRenderer.invoke('process:start', id),
-    stop: (id) => ipcRenderer.invoke('process:stop', id),
-    restart: (id) => ipcRenderer.invoke('process:restart', id),
-    add: (config) => ipcRenderer.invoke('process:add', config),
-    remove: (id) => ipcRenderer.invoke('process:remove', id),
-    update: (id, config) => ipcRenderer.invoke('process:update', id, config),
-    logs: (id, lines) => ipcRenderer.invoke('process:logs', id, lines),
+    list: createSafeIpcInvoke('process:list'),
+    start: createSafeIpcInvoke('process:start'),
+    stop: createSafeIpcInvoke('process:stop'),
+    restart: createSafeIpcInvoke('process:restart'),
+    add: createSafeIpcInvoke('process:add'),
+    remove: createSafeIpcInvoke('process:remove'),
+    update: createSafeIpcInvoke('process:update'),
+    logs: createSafeIpcInvoke('process:logs'),
     onStatusChange: (callback) => {
-      ipcRenderer.on('process:status-change', callback)
-      return () => ipcRenderer.removeListener('process:status-change', callback)
+      if (typeof callback !== 'function') return () => {}
+      const wrapped = (...args) => callback(...args)
+      ipcRenderer.on('process:status-change', wrapped)
+      return () => ipcRenderer.removeListener('process:status-change', wrapped)
     },
     onLog: (callback) => {
-      ipcRenderer.on('process:log', callback)
-      return () => ipcRenderer.removeListener('process:log', callback)
+      if (typeof callback !== 'function') return () => {}
+      const wrapped = (...args) => callback(...args)
+      ipcRenderer.on('process:log', wrapped)
+      return () => ipcRenderer.removeListener('process:log', wrapped)
     }
   },
   portPool: {
-    status: () => ipcRenderer.invoke('portpool:status'),
-    allocate: (preferred) => ipcRenderer.invoke('portpool:allocate', preferred),
-    release: (port) => ipcRenderer.invoke('portpool:release', port)
+    status: createSafeIpcInvoke('portpool:status'),
+    allocate: createSafeIpcInvoke('portpool:allocate'),
+    release: createSafeIpcInvoke('portpool:release')
   },
   conflict: {
-    check: (port) => ipcRenderer.invoke('conflict:check', port),
-    resolve: (port, mode) => ipcRenderer.invoke('conflict:resolve', port, mode),
-    list: () => ipcRenderer.invoke('conflict:list')
+    check: createSafeIpcInvoke('conflict:check'),
+    resolve: createSafeIpcInvoke('conflict:resolve'),
+    list: createSafeIpcInvoke('conflict:list')
+  },
+  system: {
+    scanProcesses: createSafeIpcInvoke('system:scanProcesses'),
+    killProcess: createSafeIpcInvoke('system:killProcess'),
+    importProcess: createSafeIpcInvoke('app:importSystemProcess'),
+    onProcessesScanned: (callback) => {
+      if (typeof callback !== 'function') return () => {}
+      const wrapped = (...args) => callback(...args)
+      ipcRenderer.on('system:processes-scanned', wrapped)
+      return () => ipcRenderer.removeListener('system:processes-scanned', wrapped)
+    }
   },
   app: {
-    openPath: (p) => ipcRenderer.invoke('app:openPath', p),
-    openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
-    minimize: () => ipcRenderer.invoke('app:minimize'),
-    maximize: () => ipcRenderer.invoke('app:maximize'),
-    close: () => ipcRenderer.invoke('app:close')
+    openPath: createSafeIpcInvoke('app:openPath'),
+    openExternal: createSafeIpcInvoke('app:openExternal'),
+    minimize: createSafeIpcInvoke('app:minimize'),
+    maximize: createSafeIpcInvoke('app:maximize'),
+    close: createSafeIpcInvoke('app:close'),
+    getLogDir: createSafeIpcInvoke('app:getLogDir'),
+    getUserDataDir: createSafeIpcInvoke('app:getUserDataDir')
   }
 })
+
+Object.freeze(window.electronAPI)
