@@ -95,13 +95,34 @@ function SystemProcessCard({ process, onKill, onImport }) {
     return cmd.substring(0, maxLen) + '...'
   }
 
+  const getCategoryIcon = (proc) => {
+    const category = proc.processType?.category
+    const framework = proc.processType?.framework?.toLowerCase() || ''
+    
+    if (framework.includes('vite')) return '⚡'
+    if (framework.includes('next')) return '▲'
+    if (framework.includes('nuxt')) return '💚'
+    if (framework.includes('vue') || framework.includes('svelte') || framework.includes('astro') || framework.includes('remix')) return '🌐'
+    if (framework.includes('react') || framework.includes('cra')) return '⚛️'
+    if (framework.includes('webpack')) return '📦'
+    if (framework.includes('angular')) return '🅰️'
+    if (framework.includes('storybook')) return '📚'
+    if (framework.includes('nest') || framework.includes('express') || framework.includes('koa')) return '🚀'
+    if (category === 'devserver') return '🌐'
+    if (category === 'server') return '🚀'
+    if (category === 'runner') return '🏃'
+    if (category === 'tool') return '🔧'
+    if (proc.displayName?.includes('npm') || proc.displayName?.includes('pnpm') || proc.displayName?.includes('yarn')) return '📦'
+    if (proc.displayName?.includes('node')) return '🟢'
+    return '⚙️'
+  }
+
   return (
     <div className={`system-process-card ${process.managedByApp ? 'managed' : ''}`}>
       <div className="spc-header">
         <div className="spc-title">
           <div className="spc-icon">
-            {process.displayName?.includes('npm') ? '📦' : 
-             process.displayName?.includes('node') ? '🟢' : '⚙️'}
+            {getCategoryIcon(process)}
           </div>
           <div>
             <div className="spc-name">
@@ -110,6 +131,12 @@ function SystemProcessCard({ process, onKill, onImport }) {
                 <span className="managed-badge">托管中</span>
               )}
             </div>
+            {process.processType?.framework && (
+              <div className="spc-framework-tag">
+                {process.processType.framework}
+                {process.processType.description && ` · ${process.processType.description}`}
+              </div>
+            )}
             {process.script && (
               <div className="spc-script" title={process.script}>
                 📄 {process.script.split(/[\\/]/).pop()}

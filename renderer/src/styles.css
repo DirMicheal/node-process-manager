@@ -675,6 +675,20 @@
   font-weight: 500;
 }
 
+.spc-framework-tag {
+  font-size: 11px;
+  color: #3498db;
+  background: #ebf5fb;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
 .spc-script {
   font-size: 11px;
   color: #7f8c8d;

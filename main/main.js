@@ -275,9 +275,7 @@ function setupIpcHandlers() {
       return systemProcesses.map(proc => ({
         ...proc,
         managedByApp: managedPids.has(proc.pid),
-        displayName: proc.name.includes('.') ? proc.name : `${proc.name}.exe`,
-        appName: systemScanner.extractAppName(proc.commandLine),
-        script: systemScanner.getProcessScript(proc.commandLine)
+        displayName: proc.displayName || (proc.name?.includes('.') ? proc.name : `${proc.name || 'node'}.exe`)
       }))
     } catch (e) {
       if (logger) {
